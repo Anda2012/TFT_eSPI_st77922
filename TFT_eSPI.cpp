@@ -15,10 +15,15 @@
 
 #include "TFT_eSPI.h"
 
+#if defined (ST77922_DRIVER)
+  #include "TFT_Drivers/ST77922/ST77922.h"
+  static ST77922 st77922_qspi;
+#endif
+
 #if defined (ESP32)
   #if defined(CONFIG_IDF_TARGET_ESP32S3)
     #include "Processors/TFT_eSPI_ESP32_S3.c" // Tested with SPI and 8-bit parallel
-  #elif defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6)
+  #elif defined(CONFIG_IDF_TARGET_ESP32C3)
     #include "Processors/TFT_eSPI_ESP32_C3.c" // Tested with SPI (8-bit parallel will probably work too!)
   #else
     #include "Processors/TFT_eSPI_ESP32.c"
@@ -72,6 +77,9 @@
 ** Description:             Start SPI transaction for writes and select TFT
 ***************************************************************************************/
 inline void TFT_eSPI::begin_tft_write(void){
+#if defined(ST77922_DRIVER)
+  return;
+#else
   if (locked) {
     locked = false; // Flag to show SPI access now unlocked
 #if defined (SPI_HAS_TRANSACTION) && defined (SUPPORT_TRANSACTIONS) && !defined(TFT_PARALLEL_8_BIT) && !defined(RP2040_PIO_INTERFACE)
@@ -80,10 +88,14 @@ inline void TFT_eSPI::begin_tft_write(void){
     CS_L;
     SET_BUS_WRITE_MODE;  // Some processors (e.g. ESP32) allow recycling the tx buffer when rx is not used
   }
+#endif
 }
 
 // Non-inlined version to permit override
 void TFT_eSPI::begin_nin_write(void){
+#if defined(ST77922_DRIVER)
+  return;
+#else
   if (locked) {
     locked = false; // Flag to show SPI access now unlocked
 #if defined (SPI_HAS_TRANSACTION) && defined (SUPPORT_TRANSACTIONS) && !defined(TFT_PARALLEL_8_BIT) && !defined(RP2040_PIO_INTERFACE)
@@ -92,6 +104,7 @@ void TFT_eSPI::begin_nin_write(void){
     CS_L;
     SET_BUS_WRITE_MODE;  // Some processors (e.g. ESP32) allow recycling the tx buffer when rx is not used
   }
+#endif
 }
 
 /***************************************************************************************
@@ -99,6 +112,9 @@ void TFT_eSPI::begin_nin_write(void){
 ** Description:             End transaction for write and deselect TFT
 ***************************************************************************************/
 inline void TFT_eSPI::end_tft_write(void){
+#if defined(ST77922_DRIVER)
+  return;
+#else
   if(!inTransaction) {      // Flag to stop ending transaction during multiple graphics calls
     if (!locked) {          // Locked when beginTransaction has been called
       locked = true;        // Flag to show SPI access now locked
@@ -110,10 +126,14 @@ inline void TFT_eSPI::end_tft_write(void){
 #endif
     }
   }
+#endif
 }
 
 // Non-inlined version to permit override
 inline void TFT_eSPI::end_nin_write(void){
+#if defined(ST77922_DRIVER)
+  return;
+#else
   if(!inTransaction) {      // Flag to stop ending transaction during multiple graphics calls
     if (!locked) {          // Locked when beginTransaction has been called
       locked = true;        // Flag to show SPI access now locked
@@ -125,6 +145,7 @@ inline void TFT_eSPI::end_nin_write(void){
 #endif
     }
   }
+#endif
 }
 
 /***************************************************************************************
@@ -610,6 +631,15 @@ void TFT_eSPI::begin(uint8_t tc)
 ***************************************************************************************/
 void TFT_eSPI::init(uint8_t tc)
 {
+#if defined(ST77922_DRIVER)
+  if (_booted) {
+    st77922_qspi.Begin();
+    _booted = false;
+    setRotation(rotation);
+  }
+  tc = tc;
+  return;
+#endif
   if (_booted)
   {
     initBus();
@@ -806,6 +836,14 @@ void TFT_eSPI::init(uint8_t tc)
 ***************************************************************************************/
 void TFT_eSPI::setRotation(uint8_t m)
 {
+#if defined(ST77922_DRIVER)
+  rotation = m & 3;
+  st77922_qspi.Set_Rotation(rotation);
+  _width = (rotation & 1) ? _init_height : _init_width;
+  _height = (rotation & 1) ? _init_width : _init_height;
+  resetViewport();
+  return;
+#endif
 
   begin_tft_write();
 
@@ -979,6 +1017,10 @@ void TFT_eSPI::spiwrite(uint8_t c)
 #ifndef RM68120_DRIVER
 void TFT_eSPI::writecommand(uint8_t c)
 {
+#if defined(ST77922_DRIVER)
+  st77922_qspi.Write_Reg(c, nullptr, 0);
+  return;
+#else
   begin_tft_write();
 
   DC_C;
@@ -988,6 +1030,7 @@ void TFT_eSPI::writecommand(uint8_t c)
   DC_D;
 
   end_tft_write();
+#endif
 }
 #else
 void TFT_eSPI::writecommand(uint16_t c)
@@ -1042,6 +1085,10 @@ void TFT_eSPI::writeRegister16(uint16_t c, uint16_t d)
 ***************************************************************************************/
 void TFT_eSPI::writedata(uint8_t d)
 {
+#if defined(ST77922_DRIVER)
+  st77922_qspi.Write_Reg(0x00, &d, 1);
+  return;
+#else
   begin_tft_write();
 
   DC_D;        // Play safe, but should already be in data mode
@@ -1051,6 +1098,7 @@ void TFT_eSPI::writedata(uint8_t d)
   CS_L;        // Allow more hold time for low VDI rail
 
   end_tft_write();
+#endif
 }
 
 
@@ -1448,6 +1496,12 @@ void TFT_eSPI::pushRect(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t *da
 void TFT_eSPI::pushImage(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t *data)
 {
   PI_CLIP;
+
+#if defined(ST77922_DRIVER)
+  st77922_qspi.Push_Image((uint16_t)x, (uint16_t)y, (uint16_t)dw, (uint16_t)dh,
+                          data + dx + dy * w, _swapBytes);
+  return;
+#endif
 
   begin_tft_write();
   inTransaction = true;
@@ -3004,8 +3058,8 @@ void TFT_eSPI::setTextPadding(uint16_t x_width)
 }
 
 /***************************************************************************************
-** Function name:           getTextPadding
-** Description:             Return the padding width (as used by setTextPadding)
+** Function name:           setTextPadding
+** Description:             Define padding width (aids erasing old text and numbers)
 ***************************************************************************************/
 uint16_t TFT_eSPI::getTextPadding(void)
 {
@@ -3359,6 +3413,10 @@ void TFT_eSPI::setAddrWindow(int32_t x0, int32_t y0, int32_t w, int32_t h)
 // Chip select stays low, call begin_tft_write first. Use setAddrWindow() from sketches
 void TFT_eSPI::setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
 {
+#if defined(ST77922_DRIVER)
+  st77922_qspi.Set_Windows((uint16_t)x0, (uint16_t)y0, (uint16_t)(x1 + 1), (uint16_t)(y1 + 1));
+  return;
+#endif
   //begin_tft_write(); // Must be called before setWindow
   addr_row = 0xFFFF;
   addr_col = 0xFFFF;

@@ -69,6 +69,8 @@ menu "TFT_eSPI"
             bool "ILI9225"
         config TFT_GC9A01_DRIVER
             bool "GC9A01"
+        config TFT_ST77922_DRIVER
+            bool "ST77922 QSPI"
     endchoice
 
     if TFT_ST7735_DRIVER || TFT_ST7789_DRIVER || TFT_ST7789_2_DRIVER || TFT_ILI9341_DRIVER || TFT_ILI9341_2_DRIVER
@@ -286,6 +288,46 @@ menu "TFT_eSPI"
                 Optional reduced SPI frequency for reading TFT.
                 Set to -1 to use the default frequency
             
+    endmenu
+
+    menu "ST77922 QSPI config"
+        depends on TFT_ST77922_DRIVER
+        config TFT_QSPI_CS
+            int "QSPI chip select pin"
+            default 10
+        config TFT_QSPI_SCLK
+            int "QSPI clock pin"
+            default 12
+        config TFT_QSPI_D0
+            int "QSPI data 0 pin"
+            default 11
+        config TFT_QSPI_D1
+            int "QSPI data 1 pin"
+            default 13
+        config TFT_QSPI_D2
+            int "QSPI data 2 pin"
+            default 14
+        config TFT_QSPI_D3
+            int "QSPI data 3 pin"
+            default 9
+        config TFT_QSPI_PORT
+            int "QSPI host"
+            default 1
+        config TFT_QSPI_FREQUENCY
+            int "QSPI frequency"
+            default 80000000
+        config ST77922_TOUCH_SCL
+            int "Touch I2C SCL pin"
+            default 39
+        config ST77922_TOUCH_SDA
+            int "Touch I2C SDA pin"
+            default 38
+        config ST77922_TOUCH_RST
+            int "Touch reset pin"
+            default 48
+        config ST77922_TOUCH_INT
+            int "Touch interrupt pin"
+            default 47
     endmenu
 
     menu "Control Pin configuration"

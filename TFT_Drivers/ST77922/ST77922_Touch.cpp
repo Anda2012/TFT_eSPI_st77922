@@ -1,0 +1,128 @@
+#include <TFT_eSPI.h>
+#if defined(ST77922_DRIVER) && defined(TFT_ESPI_ST77922_IMPLEMENTATION)
+#include "ST77922_Touch.h"
+#include <Wire.h>  
+
+i2c_master_dev_handle_t touch_handle = NULL; 
+
+ST77922_TOUCH::ST77922_TOUCH(void)
+{
+	width = TOUCH_WIDTH;
+	height = TOUCH_HEIGHT;
+	rotation = 0;
+	max_points = 0;
+}
+
+void ST77922_TOUCH::init(void)
+{
+	Wire.begin(ST77922_TOUCH_SDA, ST77922_TOUCH_SCL);
+    Wire.setClock(I2C_SPEED);
+
+	uint8_t data = 0;
+	 pinMode(ST77922_TOUCH_RST, OUTPUT);
+	digitalWrite(ST77922_TOUCH_RST, HIGH);
+	 pinMode(ST77922_TOUCH_INT, INPUT);
+	reset();
+    int retries = 100;
+	do
+	{
+        data = 0;
+		Read_Data(touch_handle, STATUS, &data, 1);
+        delay(1);
+	}while((data & 0x0F) && --retries > 0);
+	Read_Data(touch_handle, MAX_TOUCHES, &data, 1);
+	max_points = data;
+}
+
+void ST77922_TOUCH::reset(void)
+{
+	TOUCH_RST_LOW;
+	delay(100);
+	TOUCH_RST_HIGH;
+	delay(100);
+}
+
+void ST77922_TOUCH::Set_Rotation(uint8_t r)
+{
+	rotation = r;
+	switch(rotation)
+	{
+		case 0:
+		case 2:
+			width = TOUCH_WIDTH;
+			height = TOUCH_HEIGHT;
+			break;
+		case 1:
+		case 3:
+			width = TOUCH_HEIGHT;
+			height = TOUCH_WIDTH;
+			break;			
+		default:
+			break;
+	}
+}
+
+void ST77922_TOUCH::Read_Data(i2c_master_dev_handle_t dev, uint16_t reg, uint8_t* rbuf, size_t rlen)
+{
+    Wire.beginTransmission(TOUCH_ADDR);
+    Wire.write((uint8_t)((reg >> 8) & 0xFF));
+    Wire.write((uint8_t)(reg & 0xFF));
+    Wire.endTransmission(false);
+
+    Wire.requestFrom((uint16_t)TOUCH_ADDR, (size_t)rlen);
+    
+    size_t i = 0;
+    while (Wire.available() && i < rlen) {
+        rbuf[i++] = Wire.read();
+    }
+}
+
+bool ST77922_TOUCH::Get_Touch(void)
+{
+	bool result;
+	uint8_t i = 0;
+	uint8_t data[7*MAX_TOUCH_POINTS] = {0};
+	uint8_t update = 0;
+    
+	Read_Data(touch_handle, TOUCH_INFO, &update, 1);
+	if(update&0x08)
+	{
+		Read_Data(touch_handle, TOUCH_POINT0, data, 7*max_points);
+		for(i=0; i<max_points; i++)
+		{
+			if(data[i*7]&0x80)
+			{
+				touch.id[i] = (data[i*7]&0x80)>>7;
+				switch(rotation)
+				{
+					case 0:
+						touch.x[i] = ((data[i*7]&0x3F)<<8) | data[i*7+1];
+						touch.y[i] = ((data[i*7+2]&0x3F)<<8) | data[i*7+3];
+						break;
+					case 1:
+						touch.x[i] = ((data[i*7+2]&0x3F)<<8) | data[i*7+3];
+						touch.y[i] = height - (((data[i*7]&0x3F)<<8) | data[i*7+1]);
+						break;
+					case 2:
+						touch.x[i] = width - (((data[i*7]&0x3F)<<8) | data[i*7+1]);
+						touch.y[i] = height - (((data[i*7+2]&0x3F)<<8) | data[i*7+3]);
+						break;
+					case 3:
+						touch.x[i] = width - (((data[i*7+2]&0x3F)<<8) | data[i*7+3]);
+						touch.y[i] = ((data[i*7]&0x3F)<<8) | data[i*7+1];
+						break;
+					default:
+					break;
+				}
+			}
+		}
+		result = true;
+	}
+	else
+	{
+		result = false;
+	}
+	return result;
+}
+
+#endif

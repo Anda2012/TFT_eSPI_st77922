@@ -80,6 +80,8 @@
     #define ILI9225_DRIVER
 #elif defined (CONFIG_TFT_GC9A01_DRIVER)
     #define GC9A01_DRIVER
+#elif defined (CONFIG_TFT_ST77922_DRIVER)
+    #define ST77922_DRIVER
 #endif
 
 #ifdef CONFIG_TFT_RGB_ORDER
@@ -132,6 +134,7 @@
 **                         Section 2: General Pin configuration
 ***************************************************************************************/
 // General pins
+#ifndef CONFIG_TFT_ST77922_DRIVER
 #if CONFIG_TFT_CS == -1
     #error "Invalid Chip Select pin. Check TFT_eSPI configuration"
 #else
@@ -161,6 +164,26 @@
     #endif
 
     #define TFT_BACKLIGHT_ON CONFIG_TFT_BACKLIGHT_ON
+#endif
+
+#endif
+
+#ifdef CONFIG_TFT_QSPI_CS
+    #define TFT_QSPI_CS CONFIG_TFT_QSPI_CS
+    #define TFT_QSPI_SCLK CONFIG_TFT_QSPI_SCLK
+    #define TFT_QSPI_D0 CONFIG_TFT_QSPI_D0
+    #define TFT_QSPI_D1 CONFIG_TFT_QSPI_D1
+    #define TFT_QSPI_D2 CONFIG_TFT_QSPI_D2
+    #define TFT_QSPI_D3 CONFIG_TFT_QSPI_D3
+    #define TFT_QSPI_PORT CONFIG_TFT_QSPI_PORT
+    #define TFT_QSPI_FREQUENCY CONFIG_TFT_QSPI_FREQUENCY
+#endif
+
+#ifdef CONFIG_ST77922_TOUCH_SCL
+    #define ST77922_TOUCH_SCL CONFIG_ST77922_TOUCH_SCL
+    #define ST77922_TOUCH_SDA CONFIG_ST77922_TOUCH_SDA
+    #define ST77922_TOUCH_RST CONFIG_ST77922_TOUCH_RST
+    #define ST77922_TOUCH_INT CONFIG_ST77922_TOUCH_INT
 #endif
 
 
@@ -234,6 +257,15 @@
     #endif
 
 // SPI BUS
+#elif defined(CONFIG_TFT_ST77922_DRIVER)
+    #define TFT_QSPI_CS CONFIG_TFT_QSPI_CS
+    #define TFT_QSPI_SCLK CONFIG_TFT_QSPI_SCLK
+    #define TFT_QSPI_D0 CONFIG_TFT_QSPI_D0
+    #define TFT_QSPI_D1 CONFIG_TFT_QSPI_D1
+    #define TFT_QSPI_D2 CONFIG_TFT_QSPI_D2
+    #define TFT_QSPI_D3 CONFIG_TFT_QSPI_D3
+    #define TFT_QSPI_PORT CONFIG_TFT_QSPI_PORT
+    #define TFT_QSPI_FREQUENCY CONFIG_TFT_QSPI_FREQUENCY
 #else
     #if CONFIG_TFT_HSPI_PORT
         #define USE_HSPI_PORT
