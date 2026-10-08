@@ -1,9 +1,7 @@
 #include <TFT_eSPI.h>
 #if defined(ST77922_DRIVER) && defined(TFT_ESPI_ST77922_IMPLEMENTATION)
 #include "ST77922_Touch.h"
-#include <Wire.h>  
-
-i2c_master_dev_handle_t touch_handle = NULL; 
+#include <Wire.h>
 
 ST77922_TOUCH::ST77922_TOUCH(void)
 {
@@ -27,10 +25,10 @@ void ST77922_TOUCH::init(void)
 	do
 	{
         data = 0;
-		Read_Data(touch_handle, STATUS, &data, 1);
+		Read_Data(STATUS, &data, 1);
         delay(1);
 	}while((data & 0x0F) && --retries > 0);
-	Read_Data(touch_handle, MAX_TOUCHES, &data, 1);
+	Read_Data(MAX_TOUCHES, &data, 1);
 	max_points = data;
 }
 
@@ -62,7 +60,7 @@ void ST77922_TOUCH::Set_Rotation(uint8_t r)
 	}
 }
 
-void ST77922_TOUCH::Read_Data(i2c_master_dev_handle_t dev, uint16_t reg, uint8_t* rbuf, size_t rlen)
+void ST77922_TOUCH::Read_Data(uint16_t reg, uint8_t* rbuf, size_t rlen)
 {
     Wire.beginTransmission(TOUCH_ADDR);
     Wire.write((uint8_t)((reg >> 8) & 0xFF));
@@ -84,10 +82,10 @@ bool ST77922_TOUCH::Get_Touch(void)
 	uint8_t data[7*MAX_TOUCH_POINTS] = {0};
 	uint8_t update = 0;
     
-	Read_Data(touch_handle, TOUCH_INFO, &update, 1);
+	Read_Data(TOUCH_INFO, &update, 1);
 	if(update&0x08)
 	{
-		Read_Data(touch_handle, TOUCH_POINT0, data, 7*max_points);
+		Read_Data(TOUCH_POINT0, data, 7*max_points);
 		for(i=0; i<max_points; i++)
 		{
 			if(data[i*7]&0x80)

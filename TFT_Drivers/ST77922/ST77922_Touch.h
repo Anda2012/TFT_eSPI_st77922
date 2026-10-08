@@ -2,8 +2,6 @@
 #define _ST77922_TOUCH_H_
 
 #include "Arduino.h"
-#include "driver/i2s_std.h"
-#include "driver/i2c_master.h"
 #include "hal/gpio_ll.h"
 
 #define TOUCH_ADDR 0x55
@@ -56,7 +54,7 @@ public:
 	void init(void);
 	void reset(void);
 	void Set_Rotation(uint8_t r);
-	void Read_Data(i2c_master_dev_handle_t dev, uint16_t reg, uint8_t* rbuf, size_t rlen);
+	void Read_Data(uint16_t reg, uint8_t* rbuf, size_t rlen);
 	bool Get_Touch(void);
 	uint8_t max_points;
 	struct _touch_dev
